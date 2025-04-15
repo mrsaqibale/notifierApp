@@ -7,26 +7,14 @@ import ctypes
 from plyer import notification
 import threading
 
-def resource_path(relative_path):
-    """ Get absolute path to resource (handles PyInstaller's temp path) """
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-
 # =============== CONFIGURATION ===============
 API_URL = "https://midwaykebabish.ie/api/new-orders"
 CHECK_INTERVAL = 30  # Check every 30 seconds
-# SOUND_FILE = "play.wav"  # Your sound file (keep in same folder)
-SOUND_FILE = resource_path("play.wav")
-
+SOUND_FILE = "play.wav"  # Your sound file (keep in same folder)
 # ============================================
 
 # Global variable to track last order ID
 last_id = 0
-internet_connected = True  # Track internet status
 
 # Hide console window immediately
 def hide_console():
@@ -37,56 +25,35 @@ def hide_console():
 hide_console()  # Hide console on startup
 
 # Play sound (3 beeps + notification sound)
-def play_notification_sound(beeps=3, fallback_freq=1500):
+def play_notification_sound():
     try:
-        # Play beeps first
-        for _ in range(beeps):
+        # 3 alert beeps first
+        for _ in range(3):
             winsound.Beep(1000, 200)  # freq, duration
             time.sleep(0.1)
         
-        # Play custom sound if available (only for positive notifications)
-        if beeps == 3 and os.path.exists(SOUND_FILE):
+        # Play custom sound if available
+        if os.path.exists(SOUND_FILE):
             winsound.PlaySound(SOUND_FILE, winsound.SND_FILENAME | winsound.SND_ASYNC)
     except:
-        winsound.Beep(fallback_freq, 500)  # Fallback beep
+        winsound.Beep(1500, 500)  # Fallback beep
 
 # Show desktop notification
-def show_notification(title, message, is_error=False):
+def show_notification(title, message):
     try:
         notification.notify(
             title=title,
             message=message,
             app_name="Order Notifier",
-            timeout=10,  # Notification stays for 10 sec
-            app_icon=None,
-            toast=is_error  # Different style for error notifications
+            timeout=10  # Notification stays for 10 sec
         )
     except:
         pass  # Silent fail if notification fails
-
-# Check internet connection
-def check_internet():
-    global internet_connected
-    try:
-        requests.get("https://google.com", timeout=180)
-        if not internet_connected:
-            internet_connected = True
-            show_notification("Connection Restored", "Internet connection is back online")
-        return True
-    except:
-        if internet_connected:
-            internet_connected = False
-            show_notification("⚠ Connection Lost", "No internet connection", is_error=True)
-            play_notification_sound(beeps=1, fallback_freq=800)  # Single low beep for errors
-        return False
 
 # Check for new orders
 def check_orders():
     global last_id
     try:
-        if not check_internet():
-            return False
-            
         response = requests.get(
             API_URL,
             params={"last_id": last_id},
@@ -135,5 +102,3 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         sys.exit(0)
-
-
